@@ -36,19 +36,10 @@ namespace BabelVMRestore
             
             try
             {
-                try
-                {
-                    asm = ModuleDefMD.Load(args[0]);
-                }
-                catch
-                {
-                    asm = ModuleDefMD.Load(AppDomain.CurrentDomain.BaseDirectory+args[0]);
-                }
-
+                asm = ModuleDefMD.Load(args[0]);
                 Console.WriteLine("[!]Loading assembly " + asm.FullName);
-                asmpath = args[0];
-             //   if (args.Length > 1)
-                verbose = true; //args[1] == "-v";
+                asmpath = asm.Location;
+                verbose = true;
             }
             catch (Exception ex)
             {
@@ -64,7 +55,7 @@ namespace BabelVMRestore
             Console.ForegroundColor = ConsoleColor.White;
 
             // fix for dll's needed
-            Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(asmpath);
+            Environment.CurrentDirectory = Path.GetDirectoryName(asmpath);
 
             int restored = RestoreDynamicMethods(asm);
 
@@ -72,14 +63,9 @@ namespace BabelVMRestore
             Console.WriteLine("[!] Restored {0} methods from VM", restored);
             Console.ForegroundColor = ConsoleColor.White;
             //save module
-            string text2 = Path.GetDirectoryName(args[0]);
 
-            if (!text2.EndsWith("\\"))
-            {
-                text2 += "\\";
-            }
-            string path = text2 + Path.GetFileNameWithoutExtension(args[0]) + "_patched" +
-                          Path.GetExtension(args[0]);
+            string path = Path.GetDirectoryName(asmpath) + "\\"+Path.GetFileNameWithoutExtension(asmpath) + "_patched" +
+                          Path.GetExtension(asmpath);
 
             var opts = new ModuleWriterOptions(asm);
             opts.MetaDataOptions.Flags = MetaDataFlags.PreserveAll;
@@ -90,6 +76,7 @@ namespace BabelVMRestore
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("[!] Assembly saved");
             Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
         
