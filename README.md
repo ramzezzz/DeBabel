@@ -1,5 +1,5 @@
 # DeBabelVM
-Deobfuscate Babel 8.5's VM
+Deobfuscate Babel 8.5's (and maybe UP) VM
 
 ![In action](http://i.imgur.com/vqkMJmV.png)
 
