@@ -7,8 +7,8 @@
     <ProjectGuid>{0F8E0336-2865-4DA8-AF16-5ECCCE387EA6}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BVMR</RootNamespace>
-    <AssemblyName>BVMR</AssemblyName>
+    <RootNamespace>DeBabel</RootNamespace>
+    <AssemblyName>DeBabel</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
