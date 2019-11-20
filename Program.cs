@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using dnlib.Threading;
 
 namespace BabelVMRestore
 {
@@ -148,7 +149,14 @@ namespace BabelVMRestore
             #region Find Dynamic Method Callers
             foreach (TypeDef type in module.Types)
             {
-                foreach (MethodDef md in type.Methods)
+                var allMethods = type.Methods;
+                foreach (var nested in type.NestedTypes)
+                {
+                    allMethods = allMethods.Concat(nested.Methods).ToList();
+                }
+                
+
+                foreach (MethodDef md in allMethods)
                 {
                     if (!md.HasBody)
                         continue;
