@@ -1,10 +1,7 @@
 # DeBabelVM
 Deobfuscate Babel 8.5's (and maybe UP) VM
+- Restore dynamic methods
+- Restore strings
 
+Recommend to run from target.exe directory.
 ![In action](http://i.imgur.com/vqkMJmV.png)
-
-# Warning
-
-**DO NOT EXECUTE THIS OUTSIDE OF A VIRTUAL MACHINE**
-
-Due to the fact that it uses Reflection Invoking it is possible that malicious code is executed.
