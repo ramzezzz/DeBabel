@@ -1,15 +1,13 @@
-﻿using dnlib.DotNet;
+using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using dnlib.DotNet.Writer;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
-using dnlib.Threading;
+using OpCodes = dnlib.DotNet.Emit.OpCodes;
 
 namespace BabelVMRestore
 {
@@ -58,32 +56,72 @@ namespace BabelVMRestore
             // fix for dll's needed
             Environment.CurrentDirectory = Path.GetDirectoryName(asmpath);
 
-            int restored = RestoreDynamicMethods(asm);
-
             Console.ForegroundColor = ConsoleColor.Green;
+            int restored = RestoreDynamicMethods(asm);
             Console.WriteLine("[!] Restored {0} methods from VM", restored);
+            Console.WriteLine("[!] Restore strings...");
+            int restoredStrings = RestoreStrings(asm);
+            Console.WriteLine("[!] Restored {0} strings from VM", restoredStrings);
+
             Console.ForegroundColor = ConsoleColor.White;
             //save module
 
             string path = Path.GetDirectoryName(asmpath) + "\\"+Path.GetFileNameWithoutExtension(asmpath) + "_patched" +
                           Path.GetExtension(asmpath);
 
-            var opts = new ModuleWriterOptions(asm);
-            opts.MetaDataOptions.Flags = MetaDataFlags.PreserveAll;
-            opts.Logger = DummyLogger.NoThrowInstance;
-
-
+            var opts = new ModuleWriterOptions(asm)
+            {
+                MetaDataOptions = {Flags = MetaDataFlags.PreserveAll}, Logger = DummyLogger.NoThrowInstance
+            };
             asm.Write(path, opts);
+
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("[!] Assembly saved");
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
-        
+
+        private static int RestoreStrings(ModuleDefMD module)
+        {
+            var assembly = Assembly.LoadFile(Program.asmpath);
+            var stringrecovered = 0;
+            foreach (var typ in module.Types)
+            {
+                if (typ.Fields.Count != 2 || typ.NestedTypes.Count != 2 || typ.Methods.Count != 4) continue;
+                var fil = assembly.ManifestModule.ResolveField(typ.Fields[0].MDToken.ToInt32());
+                var val = (string)fil.GetValue(null);
+                var allstrings  = (Hashtable)AppDomain.CurrentDomain.GetData(val);
+                foreach (var type in module.Types)
+                {
+                    var allMethods = type.NestedTypes.Aggregate(type.Methods, (current, nested) => current.Concat(nested.Methods).ToList());
+                    foreach (var methodDef in allMethods)
+                    {
+                        if (!methodDef.HasBody) continue;
+                        var cnt = methodDef.Body.Instructions.Count;
+                        for (var i = 0; i < cnt; i++)
+                        {
+                            if (methodDef.Body.Instructions[i].OpCode != OpCodes.Call ||
+                                methodDef.Body.Instructions[i].Operand != typ.Methods[1]) continue;
+                            var index = methodDef.Body.Instructions[i - 1].Operand;
+                            var str = allstrings[index];
+                            methodDef.Body.Instructions[i - 1].OpCode = OpCodes.Ldstr;
+                            methodDef.Body.Instructions[i - 1].Operand = str;
+                            methodDef.Body.Instructions.RemoveAt(i);
+                            cnt--;
+                            i--;
+                            stringrecovered++;
+                            Console.WriteLine(" [!] String #{0} - {1} in Method {2} (RVA: {3}, MDToken: 0x{4:X}): \t{5}", stringrecovered, index,  methodDef.FullName, methodDef.RVA, methodDef.MDToken.ToInt32(), str);
+                        }
+                    }
+                }
+                break;
+            }
+            return stringrecovered;
+        }
 
 
-        static int RestoreDynamicMethods(ModuleDefMD module)
+            static int RestoreDynamicMethods(ModuleDefMD module)
         {
             List<TypeDef> toDelete = new List<TypeDef>();
             List<EncryptedInfo> InvokeCallerInfo = new List<EncryptedInfo>();
